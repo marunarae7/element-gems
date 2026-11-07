@@ -84,7 +84,7 @@
     <button id="soundBtn">🔊 소리</button>
   </div>
   <div class="help">
-    보석을 드래그하거나 두 개를 차례로 눌러 자리를 바꾸세요. 같은 보석 3개 이상을 한 줄로 맞추거나, 2×2 사각형으로 모으면 사라집니다.<br>
+    보석을 드래그하거나 두 개를 차례로 눌러 자리를 바꾸세요. 같은 보석 3개 이상을 맞추면 사라집니다.<br>
     4개 = 줄무늬 보석(한 줄 제거) · L/T자 = 폭탄 보석(주변 제거) · 5개 = ⭐ 황금 코인(같은 색 전부 제거)
   </div>
 </main>
@@ -154,8 +154,7 @@ function fillBoard() {
       let t;
       do { t = rnd(T); } while (
         (c >= 2 && row[c-1].t === t && row[c-2].t === t) ||
-        (r >= 2 && board[r-1][c].t === t && board[r-2][c].t === t) ||
-        (r >= 1 && c >= 1 && row[c-1].t === t && board[r-1][c].t === t && board[r-1][c-1].t === t));
+        (r >= 2 && board[r-1][c].t === t && board[r-2][c].t === t));
       row.push(mk(t, 0, c, r - N - 1));
     }
     board.push(row);
@@ -186,13 +185,6 @@ function findRuns() {
       }
       r = e;
     }
-  }
-  // 2x2 사각형
-  for (let r = 0; r < N - 1; r++) for (let c = 0; c < N - 1; c++) {
-    const g = board[r][c];
-    if (!g || g.t >= T) continue;
-    const cells = [[r, c], [r, c+1], [r+1, c], [r+1, c+1]];
-    if (cells.every(([y, x]) => board[y][x] && board[y][x].t === g.t)) runs.push({ cells, dir: 'sq', t: g.t, sq: true });
   }
   return runs;
 }
@@ -289,8 +281,7 @@ async function resolve(sw) {
     if (!runs.length) break;
     combo++;
     const set = new Map(), creates = [], cnt = {};
-    runs.forEach(run => run.cells.forEach(([r, c]) => { const k = r * N + c; if (!run.sq) cnt[k] = (cnt[k] || 0) + 1; set.set(k, 1); }));
-    runs.filter(run => run.sq).forEach(run => fx.push({ k: 'sq', r: run.cells[0][0], c: run.cells[0][1], life: 1 }));
+    runs.forEach(run => run.cells.forEach(([r, c]) => { const k = r * N + c; cnt[k] = (cnt[k] || 0) + 1; set.set(k, 1); }));
     const usedRun = new Set(), taken = new Set();
     for (const key in cnt) {
       if (cnt[key] < 2) continue;
@@ -301,7 +292,7 @@ async function resolve(sw) {
       creates.push({ r: kk / N | 0, c: kk % N, t: runs[idx[0]].t, sp: 'a' });
     }
     runs.forEach((run, i) => {
-      if (run.sq || usedRun.has(i) || run.cells.length < 4) return;
+      if (usedRun.has(i) || run.cells.length < 4) return;
       const p = run.cells.find(([r, c]) => sw.some(s => s[0] === r && s[1] === c) && !taken.has(r * N + c))
              || run.cells[run.cells.length >> 1];
       const k = p[0] * N + p[1]; if (taken.has(k)) return; taken.add(k);
@@ -568,11 +559,6 @@ function draw() {
     ctx.shadowColor = '#fff7c0'; ctx.shadowBlur = 20; ctx.fillStyle = '#fffbe0';
     if (f.k === 'h') ctx.fillRect(0, f.r * S + S * (.5 - .22 * f.life), W, S * .44 * f.life);
     else if (f.k === 'v') ctx.fillRect(f.c * S + S * (.5 - .22 * f.life), 0, S * .44 * f.life, W);
-    else if (f.k === 'sq') {
-      const pad = S * .5 * (1 - f.life);
-      roundRect(f.c * S - pad, f.r * S - pad, S * 2 + pad * 2, S * 2 + pad * 2, S * .3);
-      ctx.strokeStyle = '#fff3a0'; ctx.lineWidth = S * .15 * f.life; ctx.stroke();
-    }
     else if (f.k === 'ring') {
       ctx.beginPath(); ctx.arc((f.c + .5) * S, (f.r + .5) * S, (1 - f.life) * S * (f.big ? 8 : 2) + S * .3, 0, Math.PI * 2);
       ctx.strokeStyle = '#ffe680'; ctx.lineWidth = S * .25 * f.life; ctx.stroke();

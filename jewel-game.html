@@ -85,6 +85,7 @@
   </div>
   <div class="help">
     보석을 드래그하거나 두 개를 차례로 눌러 자리를 바꾸세요. 같은 보석 3개 이상을 한 줄로 맞추거나, 2×2 사각형으로 모으면 사라집니다.<br>
+    보석은 불꽃 반응 색을 가진 원소예요: <b>Li</b> 빨강 · <b>Cu</b> 초록 · <b>Cs</b> 파랑 · <b>Na</b> 노랑 · <b>K</b> 보라 · <b>Ca</b> 주황<br>
     4개 = 줄무늬 보석(한 줄 제거) · L/T자 = 폭탄 보석(주변 제거) · 5개 = ⭐ 황금 코인(같은 색 전부 제거)
   </div>
 </main>
@@ -96,12 +97,13 @@ const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 const $ = id => document.getElementById(id);
 
 const GEM = [
-  { c1:'#ffb0b0', c2:'#e3152f', c3:'#6e0010', shape:'circle' },   // 루비
-  { c1:'#b4ffbd', c2:'#1db544', c3:'#04501a', shape:'oct' },      // 에메랄드
-  { c1:'#bfe2ff', c2:'#2272e6', c3:'#0a2a78', shape:'diamond' },  // 사파이어
-  { c1:'#fff6b8', c2:'#f5b800', c3:'#7a4f00', shape:'tri' },      // 토파즈
-  { c1:'#f4c8ff', c2:'#a133dd', c3:'#420a70', shape:'hex' },      // 자수정
-  { c1:'#ffd9b0', c2:'#f27a10', c3:'#6e2e00', shape:'pent' },     // 호박
+  // 불꽃 반응 색으로 고른 원소들
+  { c1:'#ff9aa8', c2:'#e3152f', c3:'#6e0010', sym:'Li', num:3 },   // 리튬 - 빨강
+  { c1:'#a8f5b4', c2:'#1db544', c3:'#04501a', sym:'Cu', num:29 },  // 구리 - 초록
+  { c1:'#b0d8ff', c2:'#2272e6', c3:'#0a2a78', sym:'Cs', num:55 },  // 세슘 - 파랑
+  { c1:'#fff3a8', c2:'#f0b000', c3:'#7a4f00', sym:'Na', num:11 },  // 나트륨 - 노랑
+  { c1:'#efbfff', c2:'#a133dd', c3:'#420a70', sym:'K',  num:19 },  // 칼륨 - 보라
+  { c1:'#ffd2a3', c2:'#f27a10', c3:'#6e2e00', sym:'Ca', num:20 },  // 칼슘 - 주황
 ];
 const GOLD = '#ffd34d';
 
@@ -443,20 +445,6 @@ function update() {
   return moving;
 }
 
-function shapePath(shape, R) {
-  ctx.beginPath();
-  if (shape === 'circle') { ctx.arc(0, 0, R * .95, 0, Math.PI * 2); return; }
-  const cfg = { oct: [8, Math.PI / 8, .98, 1, 0], diamond: [4, -Math.PI / 2, 1.08, .82, 0], tri: [3, -Math.PI / 2, 1.18, 1, .15],
-                hex: [6, 0, 1, 1, 0], pent: [5, -Math.PI / 2, 1.04, 1, .06] }[shape];
-  const [n, rot, sc, sx, oy] = cfg;
-  for (let i = 0; i < n; i++) {
-    const a = rot + i * Math.PI * 2 / n;
-    const x = Math.cos(a) * R * sc * sx, y = Math.sin(a) * R * sc + R * oy;
-    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-  }
-  ctx.closePath();
-}
-
 function starPath(ro, ri) {
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {
@@ -496,25 +484,34 @@ function drawGem(g, px, py, scale, alpha) {
   if (g.sp === 'c') { drawCoin(R); ctx.restore(); return; }
   const G = GEM[g.t];
   ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = S * .08; ctx.shadowOffsetY = S * .05;
-  shapePath(G.shape, R);
-  const gr = ctx.createRadialGradient(-R * .3, -R * .35, R * .08, 0, 0, R * 1.25);
-  gr.addColorStop(0, G.c1); gr.addColorStop(.5, G.c2); gr.addColorStop(1, G.c3);
+  // 주기율표 칸 모양 타일
+  roundRect(-R, -R, R * 2, R * 2, R * .28);
+  const gr = ctx.createLinearGradient(0, -R, 0, R);
+  gr.addColorStop(0, G.c1); gr.addColorStop(.45, G.c2); gr.addColorStop(1, G.c3);
   ctx.fillStyle = gr; ctx.fill();
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   ctx.lineWidth = S * .035; ctx.strokeStyle = G.c3; ctx.stroke();
-  // inner facet
-  shapePath(G.shape, R * .55);
-  ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.2; ctx.stroke();
-  // highlight
-  ctx.beginPath(); ctx.ellipse(-R * .28, -R * .38, R * .26, R * .12, -.6, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fill();
+  roundRect(-R * .84, -R * .84, R * 1.68, R * 1.68, R * .18);
+  ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1.2; ctx.stroke();
+  // glossy highlight
+  ctx.beginPath(); ctx.ellipse(-R * .1, -R * .62, R * .7, R * .2, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fill();
+  // atomic number + symbol
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.9)';
+  ctx.font = `700 ${Math.round(S * .16)}px 'Segoe UI',sans-serif`;
+  ctx.fillText(G.num, -R * .72, -R * .6);
+  ctx.textAlign = 'center';
+  ctx.font = `900 ${Math.round(S * (G.sym.length > 1 ? .42 : .5))}px 'Segoe UI',Arial,sans-serif`;
+  ctx.lineJoin = 'round'; ctx.lineWidth = S * .07; ctx.strokeStyle = G.c3;
+  ctx.strokeText(G.sym, 0, R * .14);
+  ctx.fillStyle = '#fff'; ctx.fillText(G.sym, 0, R * .14);
   // specials
   if (g.sp === 'h' || g.sp === 'v') {
     ctx.save();
     if (g.sp === 'v') ctx.rotate(Math.PI / 2);
-    ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.shadowColor = '#fff'; ctx.shadowBlur = 6;
-    for (const y of [-R * .32, R * .32]) ctx.fillRect(-R * .95, y - R * .07, R * 1.9, R * .14);
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.shadowColor = '#fff'; ctx.shadowBlur = 6;
+    for (const y of [-R * .8, R * .8]) ctx.fillRect(-R * .95, y - R * .06, R * 1.9, R * .12);
     // arrows
     ctx.beginPath();
     ctx.moveTo(R * 1.15, 0); ctx.lineTo(R * .85, -R * .2); ctx.lineTo(R * .85, R * .2); ctx.closePath();
@@ -523,11 +520,11 @@ function drawGem(g, px, py, scale, alpha) {
     ctx.restore();
   } else if (g.sp === 'a') {
     const pulse = .5 + .5 * Math.sin(time / 180);
-    ctx.beginPath(); ctx.arc(0, 0, R * 1.08, 0, Math.PI * 2);
+    roundRect(-R * 1.1, -R * 1.1, R * 2.2, R * 2.2, R * .35);
     ctx.strokeStyle = `rgba(255,235,140,${.55 + .45 * pulse})`; ctx.lineWidth = S * .055;
     ctx.shadowColor = '#ffd84a'; ctx.shadowBlur = S * .25; ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = '#fff'; ctx.save(); ctx.translate(R * .35, -R * .35); ctx.rotate(time / 300);
+    ctx.fillStyle = '#fff'; ctx.save(); ctx.translate(R * .62, -R * .6); ctx.rotate(time / 300);
     starPath(R * .2, R * .08); ctx.fill(); ctx.restore();
   }
   ctx.restore();
